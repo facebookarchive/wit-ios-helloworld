@@ -1,0 +1,10 @@
+PODS:
+  - Wit (1.1.1)
+
+DEPENDENCIES:
+  - Wit (~> 1.1.0)
+
+SPEC CHECKSUMS:
+  Wit: 44522674cbb279c6ddc5af4b433fc4a9efa353d4
+
+COCOAPODS: 0.29.0
