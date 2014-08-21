@@ -12,7 +12,8 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-    [Wit sharedInstance].accessToken = @"xxx"; // replace xxx by your Wit access token
+    [Wit sharedInstance].accessToken = @"ZPSERSZGFU45YFAKT2DEXTHWYUXNNJJ5"; // replace xxx by your Wit access token
+    [Wit sharedInstance].detectSpeechStop = YES;
     return YES;
 }
 							
