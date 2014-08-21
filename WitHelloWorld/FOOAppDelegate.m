@@ -13,6 +13,7 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     [Wit sharedInstance].accessToken = @"xxx"; // replace xxx by your Wit access token
+    [Wit sharedInstance].detectSpeechStop = YES;
     return YES;
 }
 							

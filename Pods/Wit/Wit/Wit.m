@@ -7,9 +7,12 @@
 #import "WITState.h"
 #import "WITRecorder.h"
 #import "WITUploader.h"
+#import "util.h"
+#import "WITRecordingSession.h"
 
-@interface Wit () <WITRecorderDelegate, WITUploaderDelegate>
+@interface Wit () <WITRecordingSessionDelegate>
 @property (strong) WITState *state;
+@property WITRecordingSession *recordingSession;
 @end
 
 @implementation Wit {
@@ -18,30 +21,103 @@
 
 #pragma mark - Public API
 - (void)toggleCaptureVoiceIntent:(id)sender {
+    [self toggleCaptureVoiceIntent:sender withCustomData:nil];
+}
+
+- (void)toggleCaptureVoiceIntent:(id)sender withCustomData:(id) customData {
     if ([self isRecording]) {
         [self stop];
     } else {
-        [self start];
+        [self start:sender customData:customData];
     }
 }
 
 - (void)start {
-    [state.uploader startRequest];
-    [state.recorder start];
+    [self start:nil customData:nil];
 }
 
-- (void)stop {
-    [state.recorder stop];
-    [state.uploader endRequest];
+
+- (void)start:(id)sender customData:(id)customData {
+    self.recordingSession = [[WITRecordingSession alloc] initWithWitContext:state.context
+                                                                 vadEnabled:[Wit sharedInstance].detectSpeechStop withToggleStarter:sender withWitToken:[WITState sharedInstance].accessToken];
+    self.recordingSession.customData = customData;
+    self.recordingSession.delegate = self;
+}
+
+- (void)stop{
+    [self.recordingSession stop];
+    self.recordingSession = nil;
 }
 
 - (BOOL)isRecording {
-    return [self.state.recorder isRecording];
+    return [self.recordingSession isRecording];
+}
+
+- (void) interpretString: (NSString *) string {
+    NSDate *start = [NSDate date];
+    NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"https://api.wit.ai/message?q=%@&v=%@", urlencodeString(string), kWitAPIVersion]]];
+    [req setCachePolicy:NSURLCacheStorageNotAllowed];
+    [req setTimeoutInterval:15.0];
+    [req setValue:[NSString stringWithFormat:@"Bearer %@", self.accessToken] forHTTPHeaderField:@"Authorization"];
+    [req setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [NSURLConnection sendAsynchronousRequest:req
+                                       queue:[NSOperationQueue mainQueue]
+                           completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
+                               if (WIT_DEBUG) {
+                                   NSTimeInterval t = [[NSDate date] timeIntervalSinceDate:start];
+                                   NSLog(@"Wit response (%f s) %@",
+                                         t, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+                               }
+                               
+                               if (connectionError) {
+                                   [self gotResponse:nil error:connectionError];
+                                   return;
+                               }
+                               
+                               NSError *serializationError;
+                               NSDictionary *object = [NSJSONSerialization JSONObjectWithData:data
+                                                                                      options:0
+                                                                                        error:&serializationError];
+                               if (serializationError) {
+                                   [self gotResponse:nil error:serializationError];
+                                   return;
+                               }
+                               
+                               if (object[@"error"]) {
+                                   NSDictionary *infos = @{NSLocalizedDescriptionKey: object[@"error"],
+                                                           kWitKeyError: object[@"code"]};
+                                   [self gotResponse:nil
+                                               error:[NSError errorWithDomain:@"WitProcessing"
+                                                                         code:1
+                                                                     userInfo:infos]];
+                                   return;
+                               }
+                               
+                               [self gotResponse:object error:nil];
+                           }];
+}
+
+#pragma mark - Context management
+-(void)setContext:(NSDictionary *)dict {
+    NSMutableDictionary* newContext = [state.context mutableCopy];
+    if (!newContext) {
+        newContext = [@{} mutableCopy];
+    }
+
+    [dict enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+        newContext[key] = obj;
+    }];
+
+    state.context = newContext;
+}
+
+-(NSDictionary*)getContext {
+    return state.context;
 }
 
 #pragma mark - WITRecorderDelegate
 -(void)recorderGotChunk:(NSData*)chunk {
-    [state.uploader sendChunk:chunk];
+    [self.recordingSession.uploader sendChunk:chunk];
 }
 
 #pragma mark - NSNotificationCenter
@@ -64,6 +140,9 @@
         return;
     }
     [self processMessage:resp];
+}
+-(void)gotResponse:(NSDictionary *)resp error:(NSError *)err customData:(id)customData {
+    [self gotResponse:resp error:err];
 }
 
 #pragma mark - Response processing
@@ -138,6 +217,20 @@
 #pragma clang diagnostic pop
     } else {
         debug(@"Couldn't find selector: %@", NSStringFromSelector(selector));
+        if ([self.commandDelegate respondsToSelector:@selector(didNotFindIntentSelectorForIntent:entities:body:)]) {
+            NSMethodSignature * mySignature = [self.commandDelegate
+                                               methodSignatureForSelector:@selector(didNotFindIntentSelectorForIntent:entities:body:)];
+            NSInvocation * myInvocation = [NSInvocation
+                                           invocationWithMethodSignature:mySignature];
+            [myInvocation setTarget:self.commandDelegate];
+            [myInvocation setSelector:@selector(didNotFindIntentSelectorForIntent:entities:body:)];
+            [myInvocation setArgument:&intent atIndex:2];
+            [myInvocation setArgument:&entities atIndex:3];
+            [myInvocation setArgument:&body atIndex:4];
+            [myInvocation invoke];
+            
+            
+        }
     }
 }
 
@@ -154,8 +247,7 @@
 - (void)initialize {
     state = [WITState sharedInstance];
     [self observeNotifications];
-    self.state.recorder.delegate = self;
-    self.state.uploader.delegate = self;
+    self.detectSpeechStop = NO;
 }
 - (id)init {
     self = [super init];

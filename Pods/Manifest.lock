@@ -1,10 +1,10 @@
 PODS:
-  - Wit (1.1.1)
+  - Wit (1.3.4)
 
 DEPENDENCIES:
-  - Wit (~> 1.1.0)
+  - Wit (~> 1.3.4)
 
 SPEC CHECKSUMS:
-  Wit: 44522674cbb279c6ddc5af4b433fc4a9efa353d4
+  Wit: 50e01578154b6d1158f42989753d00cf4017af1b
 
-COCOAPODS: 0.29.0
+COCOAPODS: 0.33.1

@@ -116,10 +116,10 @@ static const CGFloat kMicMargin = 40.0f;
     
     // fit microphone
     if (w/h > kMicWidth/kMicHeight) {
-        actualMicHeight = h - kMicMargin;
+        actualMicHeight = h - kMicMargin*(h/100.);
         actualMicWidth = actualMicHeight * (kMicWidth/kMicHeight);
     } else {
-        actualMicWidth = w - kMicMargin;
+        actualMicWidth = w - kMicMargin*(w/100.);
         actualMicHeight = actualMicWidth * (kMicHeight/kMicWidth);
     }
     
@@ -272,10 +272,18 @@ static const CGFloat kMicMargin = 40.0f;
     return self;
 }
 
+-(void)sessionDidStart:(WITRecorder *)recorder{
+    [recorder addObserver:self forKeyPath:@"power" options:NSKeyValueObservingOptionNew
+                                            context:nil];
+}
+
+-(void)sessionDidEnd:(WITRecorder*) recorder
+{
+    [recorder removeObserver:self forKeyPath:@"power"];
+}
+
 - (void)initialize {
     [self addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
-    [[WITState sharedInstance].recorder addObserver:self forKeyPath:@"power" options:NSKeyValueObservingOptionNew
-                                            context:nil];
     
     [self addObserver:self forKeyPath:@"frame" options:0 context:nil];
     
@@ -295,7 +303,6 @@ static const CGFloat kMicMargin = 40.0f;
 }
 
 - (void)dealloc {
-    [[WITState sharedInstance].recorder removeObserver:self forKeyPath:@"power"];
     [self removeObserver:self forKeyPath:@"frame"];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self removeTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
