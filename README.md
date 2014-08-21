@@ -1,6 +1,6 @@
 # WitHelloWorld
 
-Simple implementation of the tutorial available at: https://wit.ai/docs/ios-tutorial
+Simple implementation of the tutorial available at: https://wit.ai/docs/quickstart#using-wit-from-ios
 
 ## Getting started
 
