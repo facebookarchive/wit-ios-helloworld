@@ -1,6 +1,6 @@
 # WitHelloWorld
 
-Simple implementation of the tutorial available at: https://wit.ai/docs/quickstart#using-wit-from-ios
+Simple implementation of the tutorial available at: https://wit.ai/docs/ios
 
 ## Getting Started
  1. Install [CocoaPods](http://guides.cocoapods.org/using/getting-started.html#installation) if it's not already installed
