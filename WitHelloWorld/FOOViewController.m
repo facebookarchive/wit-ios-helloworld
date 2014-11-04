@@ -42,14 +42,16 @@
     // Dispose of any resources that can be recreated.
 }
 
--(void)witDidGraspIntent:(NSString *)intent entities:(NSDictionary *)entities body:(NSString *)body error:(NSError *)e {
+- (void)witDidGraspIntent:(NSArray *)outcomes messageId:(NSString *)messageId customData:(id)customData error:(NSError *)e {
     if (e) {
         NSLog(@"[Wit] error: %@", [e localizedDescription]);
         return;
     }
-
+    NSDictionary *firstOutcome = [outcomes objectAtIndex:0];
+    NSString *intent = [firstOutcome objectForKey:@"intent"];
+    
     labelView.text = [NSString stringWithFormat:@"intent = %@", intent];
-
+    
     [self.view addSubview:labelView];
 }
 
